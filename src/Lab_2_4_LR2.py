@@ -67,8 +67,11 @@ class LinearRegressor:
         # Replace this code with the code you did in the previous laboratory session
 
         # Store the intercept and the coefficients of the model
-        self.intercept = None
-        self.coefficients = None
+
+        w = np.linalg.inv(X.T @ X) @ X.T @ y
+
+        self.intercept = w[0]
+        self.coefficients = w[1:]
 
     def fit_gradient_descent(self, X, y, learning_rate=0.01, iterations=1000):
         """
@@ -91,19 +94,19 @@ class LinearRegressor:
         )  # Small random numbers
         self.intercept = np.random.rand() * 0.01
 
-        # Implement gradient descent (TODO)
+        # Implement gradient descent
         for epoch in range(iterations):
-            predictions = None
+            predictions = self.intercept + X[:, 1:] @ self.coefficients
             error = predictions - y
 
-            # TODO: Write the gradient values and the updates for the paramenters
-            gradient = None
-            self.intercept -= None
-            self.coefficients -= None
+            # Write the gradient values and the updates for the paramenters
+            gradient = (X.T @ error) / m
+            self.intercept -= learning_rate * gradient[0]
+            self.coefficients -= learning_rate * gradient[1:]
 
-            # TODO: Calculate and print the loss every 10 epochs
+            # Calculate and print the loss every 10 epochs
             if epoch % 1000 == 0:
-                mse = None
+                mse = sum((y - predictions) ** 2) / m
                 print(f"Epoch {epoch}: MSE = {mse}")
 
     def predict(self, X):
@@ -126,7 +129,18 @@ class LinearRegressor:
         if self.coefficients is None or self.intercept is None:
             raise ValueError("Model is not yet fitted")
 
-        return None
+        if np.ndim(X) == 1:
+            # Predict when X is only one variable
+            predictions = []
+            for i in range(len(X)):
+                predictions.append(self.intercept + self.coefficients * X[i])
+        else:
+            # Predict when X is more than one variable
+            predictions = []
+            for i in range(X.shape[0]):
+                predictions.append(self.intercept + np.sum(self.coefficients * X[i]))
+
+        return np.array(predictions)
 
 
 def evaluate_regression(y_true, y_pred):
@@ -141,17 +155,20 @@ def evaluate_regression(y_true, y_pred):
         dict: A dictionary containing the R^2, RMSE, and MAE values.
     """
 
+    tss = np.sum((y_true - np.mean(y_true)) ** 2)
+    rss = sum((y_true - y_pred) ** 2)
+
     # R^2 Score
-    # TODO
-    r_squared = None
+    # Calculate R^2
+    r_squared = 1 - (rss / tss)
 
     # Root Mean Squared Error
-    # TODO
-    rmse = None
+    # Calculate RMSE
+    rmse = (rss / len(y_true)) ** 0.5
 
     # Mean Absolute Error
-    # TODO
-    mae = None
+    # Calculate MAE
+    mae = np.mean(np.abs(y_true - y_pred))
 
     return {"R2": r_squared, "RMSE": rmse, "MAE": mae}
 
@@ -171,20 +188,34 @@ def one_hot_encode(X, categorical_indices, drop_first=False):
     """
     X_transformed = X.copy()
     for index in sorted(categorical_indices, reverse=True):
-        # TODO: Extract the categorical column
-        categorical_column = None
+        # Extract the categorical column
+        categorical_column = X_transformed[:, index]
 
-        # TODO: Find the unique categories (works with strings)
-        unique_values = None
+        # Find the unique categories (works with strings)
+        unique_values = np.unique(categorical_column)
 
-        # TODO: Create a one-hot encoded matrix (np.array) for the current categorical column
-        one_hot = None
-
+        # Create a one-hot encoded matrix (np.array) for the current categorical column
+        one_hot = []
+        for i in categorical_column:
+            fila = [0] * len(unique_values)
+            for j in range(len(fila)):
+                if unique_values[j] == i:
+                    fila[j] = 1
+                    break  
+            one_hot.append(fila)
+        
+        one_hot = np.array(one_hot)
+        
         # Optionally drop the first level of one-hot encoding
         if drop_first:
             one_hot = one_hot[:, 1:]
 
-        # TODO: Delete the original categorical column from X_transformed and insert new one-hot encoded columns
-        X_transformed = None
+        # Delete the original categorical column from X_transformed and insert new one-hot encoded columns
+        if index == X_transformed.shape[1] - 1:
+            X_transformed = np.column_stack((X_transformed[:, :index], one_hot))
+        elif index == 0:
+            X_transformed = np.column_stack((one_hot, X_transformed[:, index + 1:]))
+        else:
+            X_transformed = np.column_stack((X_transformed[:, :index], one_hot, X_transformed[:, index + 1:]))
 
     return X_transformed
