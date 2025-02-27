@@ -96,15 +96,15 @@ class LinearRegressor:
 
         # Implement gradient descent
         for epoch in range(iterations):
-            predictions = self.intercept + X[:, 1:] @ self.coefficients
+            predictions = self.predict(X[:,1:])
             error = predictions - y
 
             # Write the gradient values and the updates for the paramenters
-            gradient = (X.T @ error) / m
-            self.intercept -= learning_rate * gradient[0]
-            self.coefficients -= learning_rate * gradient[1:]
+            gradient = error @ X
+            self.intercept -= (learning_rate / m) * gradient[0]
+            self.coefficients -= (learning_rate / m) * gradient[1:]
 
-            # Calculate and print the loss every 10 epochs
+            # Calculate and print the loss every 1000 epochs
             if epoch % 1000 == 0:
                 mse = sum((y - predictions) ** 2) / m
                 print(f"Epoch {epoch}: MSE = {mse}")
